@@ -478,6 +478,8 @@ cvp_df_30 <- filter(cvp_df,
 head(cvp_df_30)
 ```
 
+In the above table, `P_wave_index` is the position in the cardiac cycle (seconds since latest P-wave) and `insp_rel_index` is the position in the respiratory cycle (time since inspiration start relative to length of the respiratory cycle).
+
 Before fitting the model, we can visualise (individually) the three effects we subsequently want to model (collectively): time, respiratory cycle and heart cycle.
 
 ```{r}
