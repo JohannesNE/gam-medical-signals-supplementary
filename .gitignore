@@ -1,0 +1,14 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+*.html
+
+# RMD
+*.toc
+*.tex
+
+*_files/*
+*_cache/*
