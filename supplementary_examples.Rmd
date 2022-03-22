@@ -74,7 +74,7 @@ library(dplyr) # work with data frames
 library(ggplot2) # plots
 library(patchwork) # combine plots
 
-# only used for heart beat detection (dependencies of `find_abp_beats()`)
+# Packages only used for heart beat detection (dependencies of `find_abp_beats()`)
 # install.packages("RcppRoll")
 # install.packages("purrr")
 
@@ -86,7 +86,7 @@ source("functions.R")
 
 # Pulse pressure
 
-The first example corresponds to the model shown in Fig. 2 in the paper. The aim is to model variation in pulse pressure using information about the respiratory cycle.
+The first example corresponds to the model shown in Fig. 2 in the paper. The aim is to model variation in pulse pressure using information about the respiratory cycle. The model is then used to estimate pulse pressure variation (PPV).
 
 ## Load data
 
@@ -335,10 +335,10 @@ ggplot(PP_interpolate, aes(x = time)) +
 We can calculate pulse pressure variation (PPV) from this model using the formula 
 
 $$
-PPV = \frac{maximum(s(\text{insp_rel_index})) - minimum(s(\text{insp_rel_index}))}{\alpha}.
+PPV = \frac{maximum(s(\text{insp_rel_index})) - minimum(s(\text{insp_rel_index}))}{\alpha},
 $$
 
-To find the extrema of the smooth, we can generate a grid of predictions using only the one smooth term `s(insp_rel_index)`. We could use `predict(type="terms")` but `gratia::smooth_estimates()` conveniently returns the values of the smooth over the original range of the independent variable (here `insp_rel_index`).
+where $\alpha$ is the model constant (intercept). To find the extrema of the smooth, we can generate a grid of predictions using only the one smooth term `s(insp_rel_index)`. We could use `predict(type="terms")` but `gratia::smooth_estimates()` conveniently returns the values of the smooth over the original range of the independent variable (here `insp_rel_index`).
 
 ```{r}
 insp_rel_index_smooth <- smooth_estimates(PP_gam, 
@@ -355,7 +355,7 @@ sprintf("PPV is %.1f%%", PPV_est*100)
 This PPV is an estimate from the model. We should also report the uncertainty. `mgcv` lets us sample parameters from the posterior distribution of the model (similarly to posterior sampling from a Bayesian model; see [Gavin Simpson's answer on StackOverflow](https://stats.stackexchange.com/questions/190348/can-i-use-bootstrapping-to-estimate-the-uncertainty-in-a-maximum-value-of-a-gam) for an in-depth example of how this can be done). Here we need posterior samples of a smooth, and, conveniently, `gratia::smooth_samples()` does just that. For each sampled smooth, we can calculate PPV, and use the many samples of PPVs to calculate a confidence interval for PPV (this approach neglects that the model intercept is also an estimate, but since the standard error for the intercept is *very* small, this has negligible effect on the width of the confidence interval).
 
 ```{r}
-#| fig.cap = "Plot of 50 of the 5000 sampled smooths from the posterior distribution of the respiratory cycle smooth s(insp_rel_index)."
+#| fig.cap = "Plot of 50 of the 5000 sampled smooths from the posterior distribution of the respiratory cycle smooth `s(insp_rel_index)`."
 set.seed(1)
 # Sample 5000 smooths
 insp_smooth_samples <- smooth_samples(PP_gam, term = "s(insp_rel_index)", n = 5000)
@@ -367,7 +367,7 @@ ggplot(insp_smooth_samples %>% filter(draw <= 50), aes(.x1, value, group = draw)
 ```
 
 ```{r}
-#| fig.cap = "Histogram of PPVs calculated from each of the 5000 sampled smooths from the posterior distribution of the respiratory cycle smooth s(insp_rel_index)."
+#| fig.cap = "Histogram of PPVs calculated from each of the 5000 sampled smooths from the posterior distribution of the respiratory cycle smooth `s(insp_rel_index)`."
 # A function that returns PPV given a smooth and an intercept
 calc_PPV <- function(smooth, intercept) {
   min_PP <- min(smooth)
@@ -442,7 +442,7 @@ $$
 CVP = \alpha + f(pos_{cardiac}) + f(pos_{ventilation}) + f(pos_{cardiac},\ pos_{ventilation}) + f(t_{total}) + \epsilon.
 $$
 
-First, we need to calculate each CVP sample's position in both the cardiac and respiratory cycles. For the respiratory cycle, we will fit a cyclic spline based on the relative position (as in the pulse pressure example above). For the cardiac cycle, we cannot simply use a cyclic spline, as the cycles vary in length. We could use a cyclic spline based on the relative position in the cardiac cycle of a CVP sample, but that would assume that the CVP waveform of a long cardiac cycle is simply a stretched version of a short cycle. Instead we assume that the cardiac cycle effect depends on the time since the P-wave (initiation of atrial contraction), without constraining it to be cyclic. Instead of trying to detect P-waves from the ECG, we assume that they appear a constant interval before the QRS complex.
+First, we need to calculate each CVP sample's position in both the cardiac and respiratory cycles. For the respiratory cycle, we will fit a cyclic spline based on the relative position (as in the pulse pressure example above). For the cardiac cycle, we cannot simply use a cyclic spline, as the cycles vary in length. We could use a cyclic spline based on the relative position in the cardiac cycle of a CVP sample, but that would assume that the CVP waveform of a long cardiac cycle is simply a stretched version of a short cycle. Instead we assume that the cardiac cycle effect depends on the time since the P wave (initiation of atrial contraction), without constraining it to be cyclic. Instead of trying to detect P waves from the ECG, we assume that they appear a constant interval before the QRS complex.
 
 In the sample data, QRS complexes have already been detected from `sample_cvp$ecg`. This was done with [`rsleep::detect_rpeaks()`](https://cran.r-project.org/package=rsleep).
 
@@ -451,17 +451,18 @@ To find the PQ interval, we align 30 seconds of ECG recording by the detected QR
 ```{r}
 #| fig.cap = "ECG recording (30 seconds) aligned by QRS complexes."
 sample_cvp$ecg %>% 
-  add_time_since_event(sample_cvp$qrs$time-0.3, prefix = "pre_qrs") %>% 
+  add_time_since_event(sample_cvp$qrs$time-0.3, prefix = "before_qrs") %>% 
   na.omit() %>% 
   filter(time < 30) %>% 
-  ggplot(aes(pre_qrs_index-0.3, ECG_II, group = pre_qrs_n)) +
+  ggplot(aes(before_qrs_index-0.3, ECG_II, group = before_qrs_n)) +
   geom_line(alpha = 0.3) +
-  scale_x_continuous(breaks = seq(-0.2, 0.4, by = 0.05))
+  scale_x_continuous(breaks = seq(-0.2, 0.4, by = 0.05)) +
+  labs(x = "Time - QRS-time [seconds]")
 ```
 
-We can see that the P-wave starts ~150 ms before the QRS complex.
+We can see that the P wave starts ~150 ms before the QRS complex.
 
-In this example we will fit a GAM to the last 30 seconds before fluid administration starts (the green area in Figure \@ref(fig:cvp-overview)). We add each sample's position in both the cardiac cycle (starting at the P-wave) and the respiratory cycle, and filter the data to the relevant section.
+In this example we will fit a GAM to the last 30 seconds before fluid administration starts (the green area in Figure \@ref(fig:cvp-overview)). We add each sample's position in both the cardiac cycle (starting at the P wave) and the respiratory cycle, and filter the data to the relevant section.
 
 ```{r}
 PQ_interval <- 0.150 #seconds
@@ -478,7 +479,7 @@ cvp_df_30 <- filter(cvp_df,
 head(cvp_df_30)
 ```
 
-In the above table, `P_wave_index` is the position in the cardiac cycle (seconds since latest P-wave) and `insp_rel_index` is the position in the respiratory cycle (time since inspiration start relative to length of the respiratory cycle).
+In the above table, `P_wave_index` is the position in the cardiac cycle (seconds since latest P wave) and `insp_rel_index` is the position in the respiratory cycle (time since inspiration start relative to length of the respiratory cycle).
 
 Before fitting the model, we can visualise (individually) the three effects we subsequently want to model (collectively): time, respiratory cycle and heart cycle.
 
@@ -696,7 +697,7 @@ cvp_pre_post <- bind_rows("pre fluid" = cvp_pre,
   mutate(section_f = factor(section, levels = c("pre fluid", "post fluid"))) %>% 
   group_by(section_f) %>% 
   # Create a variable that marks the start of a new section 
-  # (used to indicate that residuals are not expected to correlated between the end of one 
+  # (used to indicate that residuals are not expected to be correlated between the end of one 
   # section and the beginning of the next).
   mutate(section_start = row_number() == 1) %>% 
   ungroup()
