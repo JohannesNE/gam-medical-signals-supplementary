@@ -1,7 +1,6 @@
 ---
 title: A practical guide to fitting GAMs to medical monitoring data with *mgcv* and R
-subtitle: | 
-  Supplement to the article: *Using Generalized Additive Models to Decompose Time Series and Waveforms, and Dissect Heart-lung Interaction Physiology*
+  
 author: 
   - | 
     | **Johannes Enevoldsen**, 
@@ -20,6 +19,10 @@ author:
     | Department of Clinical Medicine, Aarhus University and Department of Anaesthesiology 
     | & Intensive Care, Aarhus University Hospital, 
     | Aarhus, Denmark
+abstract: |
+  Supplement to the article: *Using Generalized Additive Models to Decompose Time Series and Waveforms, and Dissect Heart-lung Interaction Physiology*.
+  
+  The document examplifies how to fit and work with generalized additive models (GAMs) in [R](https://www.r-project.org/) using *[mgcv](https://CRAN.R-project.org/package=mgcv)*. 
 output:
   bookdown::pdf_document2:
     extra_dependencies: ["underscore", "float"]
@@ -54,10 +57,6 @@ knitr::opts_template$set(wide = list(
   nooutput = list(fig.height=1, fig.width=1, out.width = "100%") # keep cache with default opt change
 )
 ```
-
---------------
-
-This document examplifies how to fit and work with generalised additive models (GAMs) in [R](https://www.r-project.org/) using *[mgcv](https://CRAN.R-project.org/package=mgcv)*. 
 
 # Data and source code
 
